@@ -1,0 +1,165 @@
+/* I chose to do the second option in the Data Analytics capstone progject: Bellabeat Analysis */
+
+-- Data exploration, cleaning and exporting were completed in SQL (SQL SEVER). 
+-- Data visualization was completed with Tableau.
+-- The Following tables were used; dailyActivity_merged, sleepDay_merged & WeightLogInfo_merged.
+
+
+-- Checking table data types
+SELECT
+TABLE_CATALOG,
+TABLE_SCHEMA,
+TABLE_NAME, 
+COLUMN_NAME, 
+DATA_TYPE 
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'dailyActivity_merged$'
+
+-- Sleep data
+SELECT
+TABLE_CATALOG,
+TABLE_SCHEMA,
+TABLE_NAME, 
+COLUMN_NAME, 
+DATA_TYPE 
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'SleepDay_merged$'
+
+-- Weight data
+SELECT
+TABLE_CATALOG,
+TABLE_SCHEMA,
+TABLE_NAME, 
+COLUMN_NAME, 
+DATA_TYPE 
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'weightLogInfo_merged$'
+
+
+
+-- Viewing Data 
+SELECT *
+FROM ..dailyActivity_merged$
+-- Observation: info in the date field isn't formated as date values.
+
+SELECT *
+FROM ..sleepDay_merged$
+-- Date is formated to include time, however the time recorded isn't relevant.
+
+SELECT *
+FROM ..weightLogInfo_merged$
+-- Date is formated to include time, however the time recorded isn't relevant.
+
+
+
+-- Convertinig the dates as a standard format from dailyActivity by using the CONVERT & Making a new Table for cleaned data.
+DROP TABLE IF EXISTS Cleaned_Daily_Activity
+SELECT * INTO Cleaned_Daily_Activity FROM 
+(
+SELECT *, 
+	CONVERT(date, [ActivityDate], 110) Converted_Date
+		FROM..dailyActivity_merged$)
+As table1
+
+
+
+-- Convertinig the dates as a standard format by using the CONVERT & Making a new Table for cleaned data.
+DROP TABLE IF EXISTS Cleaned_Daily_Activity
+SELECT * INTO Cleaned_Daily_Activity FROM 
+(
+SELECT *, 
+	CONVERT(date, [ActivityDate], 110) Converted_Date
+		FROM..dailyActivity_merged$)
+As table1
+
+
+
+-- Checking for Duplicates in the from: Cleaned_Daily_Activity
+SELECT 
+	ID, 
+	Converted_Date, 
+	TotalSteps, 
+	TotalDistance, 
+	TrackerDistance, 
+	LoggedActivitiesDistance, 
+	VeryActiveDistance,
+	ModeratelyActiveDistance,
+	LightActiveDistance,
+	SedentaryActiveDistance,
+	VeryActiveMinutes,
+	FairlyActiveMinutes,
+	LightlyActiveMinutes,
+	SedentaryMinutes,
+	Calories, Count(*)
+FROM Cleaned_Daily_Activity
+GROUP BY 
+	ID, 
+	Converted_Date, 
+	TotalSteps, 
+	TotalDistance, 
+	TrackerDistance, 
+	LoggedActivitiesDistance, 
+	VeryActiveDistance,
+	ModeratelyActiveDistance,
+	LightActiveDistance,
+	SedentaryActiveDistance,
+	VeryActiveMinutes,
+	FairlyActiveMinutes,
+	LightlyActiveMinutes,
+	SedentaryMinutes,
+	Calories
+HAVING COUNT(*)>1
+-- Conclusion: There are no duplicated rows in the DailyActivity_Merged dataset.
+
+
+
+-- Correlation between total steps and calories burned by user or day.
+
+WITH CTE_StepsVsCalories As
+(SELECT 
+	ID, AVG (TotalSteps) as AVG_of_TotalSepts, AVG (calories) AVG_of_Calories
+FROM 
+	Cleaned_Daily_Activity
+GROUP BY 
+	ID)
+Select ID, Cast (AVG_of_TotalSepts as numeric) As AVG_of_TotalSepts, CAST (AVG_of_Calories as numeric)AVG_of_Calories
+FROM CTE_StepsVsCalories
+-- There is a correlation between steps taken and calories burnred, both by day and user. 
+-- The relationship is a postive one wth an r-squared score of 0.33 (between 0.2 - 0.5 more data should be gathered)
+-- Link to Tableau: https://public.tableau.com/authoring/CorrelationstepsvsCalories-Bellabeat/Dashboard1#1
+
+
+
+
+-- Checking To see what are the most active days of the week
+WITH CTE_Day_of_The_Week As
+(SELECT
+	Calories, Format (Converted_Date, 'dddd') As Day_of_Week, VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes
+FROM
+	Cleaned_Daily_Activity)
+SELECT 
+	Day_of_Week, SUM (Calories) as Total_Calories, SUM (VeryActiveMinutes) as V_Active, SUM (FairlyActiveMinutes) as F_Active, SUM (LightlyActiveMinutes) as L_Active,
+	SUM (Calories) + SUM (VeryActiveMinutes) + SUM (FairlyActiveMinutes) + SUM (LightlyActiveMinutes) as Total_Active_Minutes
+FROM 
+	CTE_Day_of_The_Week
+GROUP BY 
+	Day_of_Week
+ORDER BY Total_Calories
+-- Conclusion, users accumulated minutes showed that in the middle of the weeks (Tuesday's & Wednesdays) were the most active days of the week.
+-- Tableau Link: https://public.tableau.com/authoring/CorrelationstepsvsCalories-Bellabeat/Dashboard1/User%20Active%20Time%20By%20day%20of%20the%20week#1
+
+
+
+
+-- Checking which Activity category users did most by percentage.
+SELECT
+	SUM (VeryActiveMinutes)/ (SUM (VeryActiveMinutes) + SUM (FairlyActiveMinutes) + SUM (LightlyActiveMinutes)) as V_Active, 
+	SUM (FairlyActiveMinutes) / (SUM (VeryActiveMinutes) + SUM (FairlyActiveMinutes) + SUM (LightlyActiveMinutes))as F_Active, 
+	SUM (LightlyActiveMinutes)/ (SUM (VeryActiveMinutes) + SUM (FairlyActiveMinutes) + SUM (LightlyActiveMinutes)) as L_Active
+FROM
+	Cleaned_Daily_Activity
+
+
+
+
+
