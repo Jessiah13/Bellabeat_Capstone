@@ -161,5 +161,105 @@ FROM
 
 
 
+-- Correlation between mins slept & Calories lost using Inner Join.
+SELECT
+	Clean_Sleep_Day_merged.Id, Avg (Clean_Sleep_Day_merged.TotalMinutesAsleep) AVG_TotalMinutesAsleep, Avg (Cleaned_Daily_Activity.Calories) AVG_Calories
+FROM
+	Clean_Sleep_Day_merged
+		INNER JOIN Cleaned_Daily_Activity
+ON Clean_Sleep_Day_merged.Id = Cleaned_Daily_Activity.Id
+GROUP BY
+	Clean_Sleep_Day_merged.Id
+-- The correlation between the average sleep amount and the average calories burned by user does not give a strong r-squared value ()
+-- However, the case is much different if the SUM is used instead lof Average. The r-squared score is: 
+SELECT
+	Clean_Sleep_Day_merged.Id, SUM (Clean_Sleep_Day_merged.TotalMinutesAsleep) SUM_TotalMinutesAsleep, SUM (Cleaned_Daily_Activity.Calories) SUM_Calories
+FROM
+	Clean_Sleep_Day_merged
+		INNER JOIN Cleaned_Daily_Activity
+ON Clean_Sleep_Day_merged.Id = Clean_Sleep_Day_merged.Id
+GROUP BY
+	Clean_Sleep_Day_merged.Id
+-- Conclusion, there is a relationship between amount of time slept and calories burned, however dataset users were inconsistent and not enough info is collected over a greater period of time.
+
+
+
+
+-- Correlation Between Mins Asleep & Active Mins.
+SELECT
+	Clean_Sleep_Day_merged.Id, AVG (Clean_Sleep_Day_merged.TotalMinutesAsleep) AVG_Mins_Asleep, AVG (Cleaned_Daily_Activity.VeryActiveMinutes) AVG_Very_Active_Mins, 
+	AVG (Cleaned_Daily_Activity.FairlyActiveMinutes) AVG_Fairly_Active_Mins, AVG (Cleaned_Daily_Activity.LightlyActiveMinutes) AVG_Lightly_Active_Mins
+FROM Clean_Sleep_Day_merged
+	INNER JOIN Cleaned_Daily_Activity
+	ON Clean_Sleep_Day_merged.Id = Cleaned_Daily_Activity.Id
+GROUP BY
+	Clean_Sleep_Day_merged.Id
+
+
+
+-- Time Wasted in bed.
+SELECT
+	ID, SUM (TotalTimeInBed) - SUM (TotalMinutesAsleep) TotalTime_Wasted_In_Bed
+FROM
+	Clean_Sleep_Day_merged
+GROUP BY
+	Id
+
+-- Creating Temp Table to get Total Active Minutes
+DROP TABLE IF EXISTS #Temp_ACtive_Minutes
+SELECT Cleaned_Daily_Activity.Id,
+	SUM (Cleaned_Daily_Activity.LightlyActiveMinutes) + 
+	SUM (Cleaned_Daily_Activity.VeryActiveMinutes) + 
+	SUM (Cleaned_Daily_Activity.VeryActiveMinutes) As Total_Active_Mins
+INTO #Temp_ACtive_Minutes
+FROM..Cleaned_Daily_Activity
+GROUP BY Cleaned_Daily_Activity.Id
+	
+Select * 
+FROM #Temp_ACtive_Minutes
+
+
+
+-- Correlation between minutes wasted in bed & Total Active minutes (AVG)
+SELECT 
+	Clean_Sleep_Day_merged.Id, AVG (#Temp_ACtive_Minutes.Total_Active_Mins) Total_Active_Minutes,
+	AVG (Clean_Sleep_Day_merged.TotalTimeInBed) - AVG (Clean_Sleep_Day_merged.TotalMinutesAsleep) As Time_Wasted
+FROM Clean_Sleep_Day_merged
+	INNER JOIN #Temp_ACtive_Minutes 
+	ON Clean_Sleep_Day_merged.Id = #Temp_ACtive_Minutes.Id
+GROUP BY 
+Clean_Sleep_Day_merged.Id	
+
+
+
+-- Correlation between minutes wasted and Clories lost: 
+SELECT 
+	Clean_Sleep_Day_merged.Id, AVG (Cleaned_Daily_Activity.Calories)as AVG_Calories,
+	AVG (Clean_Sleep_Day_merged.TotalTimeInBed) - AVG (Clean_Sleep_Day_merged.TotalMinutesAsleep) As Time_Wasted
+FROM Clean_Sleep_Day_merged
+	INNER JOIN Cleaned_Daily_Activity 
+	ON Clean_Sleep_Day_merged.Id = Cleaned_Daily_Activity.Id
+GROUP BY 
+Clean_Sleep_Day_merged.Id	
+
+
+ 
+
+ -- Bar chart for time asleep, time in bed and time wasted in bed
+ WITH CTE_Week_Info as
+	(Select FORMAT (Clean_Sleep_Day_merged.SleepDay, 'dddd') as Day_of_week,
+	SUM (Clean_Sleep_Day_merged.TotalTimeInBed) Time_In_Bed, SUM (Clean_Sleep_Day_merged.TotalMinutesAsleep) Time_Asleep,
+	SUM (Clean_Sleep_Day_merged.TotalTimeInBed) - SUM (Clean_Sleep_Day_merged.TotalMinutesAsleep) Time_Wasted_In_Bed
+	FROM
+		Clean_Sleep_Day_merged
+	GROUP BY
+		Clean_Sleep_Day_merged.SleepDay
+	)
+	SELECT
+		Day_of_week, SUM (Time_In_bed) as Time_In_Bed, SUM (Time_Asleep) as Time_Asleep, SUM (Time_Wasted_In_Bed) as Time_Wasted__In_Bed
+	FROM
+		CTE_Week_Info
+	GROUP BY
+		Day_of_Week
 
 
