@@ -208,7 +208,7 @@ calories_v_activity <- dailyActivity
       y = "Avearge Minutes Asleep"
     ) + theme_minimal()
   
-  ###
+  # Grouped bar chart showing time spent in bed activities by days of the week.
   
   time_wasted_bar_chart <- as.data.frame(clean_Sleep)
   time_wasted_bar_chart$SleepDay <- weekdays(time_wasted_bar_chart$SleepDay)
